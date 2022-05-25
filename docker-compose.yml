@@ -8,6 +8,6 @@ services:
     volumes:
       - .:/srv/smarter-sharp
       - ./infra-dev/volumes/files:/shared/files
-      - ~/.ssh:/home/dev/.ssh
+      - ~/.ssh:/home/node/.ssh
     environment:
       - NODE_OPTIONS="--max-old-space-size=8192"
