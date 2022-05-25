@@ -1,0 +1,14 @@
+{
+  "name": "smarter-sharp",
+  "version": "0.1.0",
+  "license": "GPL",
+  "type": "module",
+  "dependencies": {
+    "sharp": "^0.29.3",
+    "smartcrop": "^2.0.5",
+    "smartcrop-sharp": "^2.0.5"
+  },
+  "scripts": {
+    "dev": "node src/app.js"
+  }
+}

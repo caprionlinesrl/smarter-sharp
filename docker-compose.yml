@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  node:
+    build: infra-dev/node
+    ports:
+      - "3003:3003"
+    volumes:
+      - .:/srv/smarter-sharp
+      - ./infra-dev/volumes/files:/shared/files
+      - ~/.ssh:/home/dev/.ssh
+    environment:
+      - NODE_OPTIONS="--max-old-space-size=8192"
