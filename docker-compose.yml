@@ -11,3 +11,6 @@ services:
       - ~/.ssh:/home/node/.ssh
     environment:
       - NODE_OPTIONS="--max-old-space-size=8192"
+    command:
+      - '/srv/smarter-sharp/src/app.js'
+      - '--basedir=/shared/files'

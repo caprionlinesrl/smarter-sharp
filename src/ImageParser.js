@@ -8,8 +8,8 @@ class ImageParser
     {
         this.options = options;
 
-        if (this.options.basePath === undefined) {
-            this.options.basePath = '';
+        if (this.options.basedir === undefined) {
+            this.options.basedir = '';
         }
     }
 
@@ -40,7 +40,7 @@ class ImageParser
         var image_name = parts.pop();
         var options = parts.pop();
 
-        result.path = this.options.basePath + parts.join('/') + '/' + image_name;
+        result.path = this.options.basedir + parts.join('/') + '/' + image_name;
 
         var options_parts = options.split('_');
         var size = options_parts[0];
