@@ -15,12 +15,12 @@ class ImageParser
 
     parse(image_url, onSuccess, onFailure)
     {
-        this._parseUrl(image_url, onFailure, img => {
-            if (img.position === 'smart') {
-                this._parseSmart(img, onSuccess, onFailure);
+        this._parseUrl(image_url, onFailure, args => {
+            if (args.position === 'smart') {
+                this._parseSmart(args, onSuccess, onFailure);
             }
             else {
-                this._parsePosition(img, onSuccess, onFailure);
+                this._parsePosition(args, onSuccess, onFailure);
             }
         });
     }
@@ -29,30 +29,11 @@ class ImageParser
     {
         var result = {
             path: '',
-            format: 'jpeg',
             width: 0,
             height: 0,
+            format: 'jpeg',
             position: 'smart'
         };
-
-        var url_path_name = url.parse(image_url).pathname;
-        var parts = url_path_name.split('/');
-        var image_name = parts.pop();
-        var options = parts.pop();
-
-        result.path = this.options.basedir + parts.join('/') + '/' + image_name;
-
-        var options_parts = options.split('_');
-        var size = options_parts[0];
-        var size_parts = size.split('x');
-
-        if (size_parts[0] !== '') {
-            result.width = parseInt(size_parts[0]);
-        }
-
-        if (size_parts[1] !== undefined) {
-            result.height = parseInt(size_parts[1]);
-        }
 
         var formats = [
             'jpeg',
@@ -75,21 +56,33 @@ class ImageParser
             'leftTop'
         ];
 
-        options_parts.forEach(o => {
-            if (formats.includes(o)) {
-                result.format = o;
-            }
+        var parsed_url = url.parse(image_url);
 
-            if (positions.includes(o)) {
-                result.position = o;
+        result.path = parsed_url.pathname;
+
+        parsed_url.query.split('&').forEach(arg => {
+            var [name, value] = arg.split('=');
+
+            if (name === 'format' && formats.includes(value)) {
+                result.format = value;
+            }
+            else if (name === 'position' && positions.includes(value)) {
+                result.position = value;
+            }
+            else if (['width', 'height'].includes(name)) {
+                result[name] = parseInt(value);
             }
         });
 
-        sharp(result.path)
+        sharp(this.options.basedir + result.path)
             .metadata()
             .then(metadata => {
                 if (result.height == 0) {
                     result.height = parseInt(result.width * metadata.height / metadata.width);
+                }
+
+                if (result.width == 0) {
+                    result.width = parseInt(result.height * metadata.width / metadata.height);
                 }
 
                 callback(result);
@@ -97,11 +90,11 @@ class ImageParser
             .catch(err => onFailure(err, result));
     }
 
-    _parseSmart(img, onSuccess, onFailure)
+    _parseSmart(args, onSuccess, onFailure)
     {
-        smartcrop.crop(img.path, { width: img.width, height: img.height })
+        smartcrop.crop(this.options.basedir + args.path, { width: args.width, height: args.height })
             .then(result => {
-                sharp(img.path)
+                sharp(this.options.basedir + args.path)
                     .extract({
                         width: result.topCrop.width,
                         height: result.topCrop.height,
@@ -109,29 +102,29 @@ class ImageParser
                         top: result.topCrop.y
                     })
                     .resize({
-                        width: img.width,
-                        height: img.height
+                        width: args.width,
+                        height: args.height
                     })
-                    .toFormat(img.format)
+                    .toFormat(args.format)
                     .toBuffer()
-                    .then(data => onSuccess(data, img))
-                    .catch(err => onFailure(err, img));
+                    .then(data => onSuccess(data, args))
+                    .catch(err => onFailure(err, args));
             })
             .catch(err => onFailure(err));
     }
 
-    _parsePosition(img, onSuccess, onFailure)
+    _parsePosition(args, onSuccess, onFailure)
     {
-        sharp(img.path)
+        sharp(this.options.basedir + args.path)
             .resize({
-                width: img.width,
-                height: img.height,
-                position: this._getPosition(img.position)
+                width: args.width,
+                height: args.height,
+                position: this._getPosition(args.position)
             })
-            .toFormat(img.format)
+            .toFormat(args.format)
             .toBuffer()
-            .then(data => onSuccess(data, img))
-            .catch(err => onFailure(err, img));
+            .then(data => onSuccess(data, args))
+            .catch(err => onFailure(err, args));
     }
 
     _getPosition(pos)
