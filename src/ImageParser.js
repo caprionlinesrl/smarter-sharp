@@ -60,28 +60,33 @@ class ImageParser
 
         result.path = parsed_url.pathname;
 
-        parsed_url.query.split('&').forEach(arg => {
-            var [name, value] = arg.split('=');
+        if (parsed_url.query) {
+            parsed_url.query.split('&').forEach(arg => {
+                var [name, value] = arg.split('=');
 
-            if (name === 'format' && formats.includes(value)) {
-                result.format = value;
-            }
-            else if (name === 'position' && positions.includes(value)) {
-                result.position = value;
-            }
-            else if (['width', 'height'].includes(name)) {
-                result[name] = parseInt(value);
-            }
-        });
+                if (name === 'format' && formats.includes(value)) {
+                    result.format = value;
+                }
+                else if (name === 'position' && positions.includes(value)) {
+                    result.position = value;
+                }
+                else if (['width', 'height'].includes(name)) {
+                    result[name] = parseInt(value);
+                }
+            });
+        }
 
         sharp(this.options.basedir + result.path)
             .metadata()
             .then(metadata => {
-                if (result.height == 0) {
+                if (result.width == 0 && result.height == 0) {
+                    result.width = metadata.width;
+                    result.height = metadata.height;
+                }
+                else if (result.width > 0 && result.height == 0) {
                     result.height = parseInt(result.width * metadata.height / metadata.width);
                 }
-
-                if (result.width == 0) {
+                else if (result.width == 0 && result.height > 0) {
                     result.width = parseInt(result.height * metadata.width / metadata.height);
                 }
 
