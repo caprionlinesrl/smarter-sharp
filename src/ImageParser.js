@@ -31,6 +31,8 @@ class ImageParser
             path: '',
             width: 0,
             height: 0,
+            shortSide: 0,
+            longSide: 0,
             format: 'jpeg',
             position: 'smart'
         };
@@ -70,7 +72,7 @@ class ImageParser
                 else if (name === 'position' && positions.includes(value)) {
                     result.position = value;
                 }
-                else if (['width', 'height'].includes(name)) {
+                else if (['width', 'height', 'shortSide', 'longSide'].includes(name)) {
                     result[name] = parseInt(value);
                 }
             });
@@ -79,6 +81,23 @@ class ImageParser
         sharp(this.options.basedir + result.path)
             .metadata()
             .then(metadata => {
+                if (result.shortSide > 0) {
+                    if (metadata.width < metadata.height) {
+                        result.width = result.shortSide;
+                    }
+                    else {
+                        result.height = result.shortSide;
+                    }
+                }
+                else if (result.longSide > 0) {
+                    if (metadata.width > metadata.height) {
+                        result.width = result.longSide;
+                    }
+                    else {
+                        result.height = result.longSide;
+                    }
+                }
+
                 if (result.width == 0 && result.height == 0) {
                     result.width = metadata.width;
                     result.height = metadata.height;
