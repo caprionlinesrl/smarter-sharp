@@ -12,5 +12,6 @@ services:
     environment:
       - NODE_OPTIONS="--max-old-space-size=8192"
     command:
+      - 'nodemon'
       - '/srv/smarter-sharp/src/app.js'
       - '--basedir=/shared/files'
