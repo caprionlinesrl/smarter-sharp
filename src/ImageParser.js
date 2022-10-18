@@ -60,7 +60,7 @@ class ImageParser
 
         var parsed_url = url.parse(image_url);
 
-        result.path = parsed_url.pathname;
+        result.path = decodeURI(parsed_url.pathname);
 
         if (parsed_url.query) {
             parsed_url.query.split('&').forEach(arg => {
