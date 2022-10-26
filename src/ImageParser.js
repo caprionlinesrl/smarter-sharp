@@ -15,6 +15,8 @@ class ImageParser
 
     parse(image_url, onSuccess, onFailure)
     {
+        
+
         this._parseUrl(image_url, onFailure, args => {
             if (args.position === 'smart') {
                 this._parseSmart(args, onSuccess, onFailure);
