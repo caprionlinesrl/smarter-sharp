@@ -1,24 +1,39 @@
 import http from 'http';
 import process from 'process';
-import ImageParser from './ImageParser.js';
 import FilesystemCache from "node-filesystem-cache";
+import { parseOptions } from './options.js';
+import { parseUrl, parseSmart, parsePosition } from './image.js';
 
-var args = {
+const options = parseOptions(process.argv, {
     hostname: '0.0.0.0',
     port: 3003,
-    basedir: '.',
-    cachedir: './cache'
-};
-
-process.argv.forEach(arg => {
-    // format: --name=value
-    if (arg.startsWith('--') && arg.includes('=')) {
-        var name = arg.substring(2).split('=')[0];
-        args[name] = arg.split('=')[1];
-    }
+    baseDir: '.',
+    cacheDir: './cache'
 });
 
 const server = http.createServer((req, res) => {
+    parseUrl(req.url, options)
+        .then(imageData => {
+            return imageData.position === 'smart'
+                ? parseSmart(imageData, options)
+                : parsePosition(imageData, options);
+        })
+        .then(result => {
+            console.log(result);
+
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'image/' + result.imageData.format);
+            res.end(Buffer.from(result.data));
+        })
+        .catch(err => {
+            console.log(err);
+
+            res.statusCode = 404;
+            res.setHeader('Content-Type', 'text/plain');
+            res.end('Not found');
+        });
+
+    /*
     const cache = new FilesystemCache(args.cachedir);
 
     var item = cache.get(req.url);
@@ -50,11 +65,12 @@ const server = http.createServer((req, res) => {
             res.end('Not found');
         }
     );
+    */
 });
 
-server.listen(args.port, args.hostname, () => {
+server.listen(options.port, options.hostname, () => {
     console.log(
-        'Server running at http://' + args.hostname + ':' + args.port + '/ ' +
-        'on basedir ' + args.basedir
+        'Server running at http://' + options.hostname + ':' + options.port + '/ ' +
+        'on baseDir ' + options.baseDir
     );
 });

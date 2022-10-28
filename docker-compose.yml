@@ -15,5 +15,5 @@ services:
     command:
       - 'nodemon'
       - '/srv/smarter-sharp/src/app.js'
-      - '--basedir=/shared/files'
-      - '--cachedir=/shared/cache'
+      - '--baseDir=/shared/files'
+      - '--cacheDir=/shared/cache'
