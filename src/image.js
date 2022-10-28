@@ -1,8 +1,38 @@
+import FilesystemCache from "node-filesystem-cache";
 import url from 'url';
 import sharp from 'sharp';
 import smartcrop from 'smartcrop-sharp';
 
-export const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
+export const processImageWithCache = (imageUrl, options) => new Promise((resolve, reject) => {
+    const cache = new FilesystemCache(options.cacheDir);
+
+    var result = cache.get(imageUrl);
+
+    if (result !== null) {
+        resolve(result);
+        return;
+    }
+
+    processImage(imageUrl, options)
+        .then(result => {
+            resolve(result);
+            cache.put(imageUrl, result);
+        })
+        .catch(reject);
+});
+
+export const processImage = (imageUrl, options) => new Promise((resolve, reject) => {
+    parseUrl(imageUrl, options)
+        .then(imageData => {
+            return imageData.position === 'smart'
+                ? parseSmart(imageData, options)
+                : parsePosition(imageData, options);
+        })
+        .then(resolve)
+        .catch(reject);
+});
+
+const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
     var result = {
         path: '',
         width: 0,
@@ -90,7 +120,7 @@ export const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => 
         .catch(reject);
 });
 
-export const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
+const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
     var imageSize = {
         width: imageData.width,
         height: imageData.height
@@ -114,12 +144,12 @@ export const parseSmart = (imageData, options) => new Promise((resolve, reject) 
         .catch(reject);
 });
 
-export const parsePosition = (imageData, options) => new Promise((resolve, reject) => {
+const parsePosition = (imageData, options) => new Promise((resolve, reject) => {
     sharp(options.baseDir + imageData.path)
         .resize({
             width: imageData.width,
             height: imageData.height,
-            position: _getPosition(imageData.position)
+            position: getPosition(imageData.position)
         })
         .toFormat(imageData.format)
         .toBuffer()
@@ -127,7 +157,7 @@ export const parsePosition = (imageData, options) => new Promise((resolve, rejec
         .catch(reject);
 });
 
-const _getPosition = pos => {
+const getPosition = pos => {
     if (pos === 'entropy') {
         return sharp.strategy.entropy;
     }
@@ -135,6 +165,7 @@ const _getPosition = pos => {
         return sharp.strategy.attention;
     }
     else {
+        // rightTop -> right top
         return pos.split(/(?=[A-Z])/).join(' ').toLowerCase();
     }
 };
