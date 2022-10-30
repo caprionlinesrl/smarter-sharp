@@ -27,6 +27,7 @@ const server = http.createServer((req, res) => {
 server.listen(options.port, options.hostname, () => {
     console.log(
         'Server running at http://' + options.hostname + ':' + options.port + '/ ' +
-        'on baseDir ' + options.baseDir
+        'on baseDir ' + options.baseDir + ' ' +
+        'on cacheDir ' + options.cacheDir
     );
 });

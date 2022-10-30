@@ -40,7 +40,10 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         shortSide: 0,
         longSide: 0,
         format: 'jpeg',
-        position: 'smart'
+        position: 'smart',
+        fit: 'cover',
+        minScale: 1,
+        boost: null
     };
 
     var formats = [
@@ -64,6 +67,11 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         'leftTop'
     ];
 
+    var fits = [
+        'cover',
+        'contain'
+    ];
+
     var parsedUrl = url.parse(imageUrl);
 
     result.path = decodeURI(parsedUrl.pathname);
@@ -72,14 +80,31 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         parsedUrl.query.split('&').forEach(arg => {
             var [name, value] = arg.split('=');
 
-            if (name === 'format' && formats.includes(value)) {
+            if (['width', 'height', 'shortSide', 'longSide'].includes(name)) {
+                result[name] = parseInt(value);
+            }
+            else if (name === 'format' && formats.includes(value)) {
                 result.format = value;
             }
             else if (name === 'position' && positions.includes(value)) {
                 result.position = value;
             }
-            else if (['width', 'height', 'shortSide', 'longSide'].includes(name)) {
-                result[name] = parseInt(value);
+            else if (name === 'fit' && fits.includes(value)) {
+                result.fit = value;
+            }
+            else if (name === 'minScale') {
+                result.minScale = value;
+            }
+            else if (name === 'boost') {
+                const boost = value.split(',');
+
+                result.boost = {
+                    x: boost[0] ?? 0,
+                    y: boost[1] ?? 0,
+                    width: boost[2] ?? 0,
+                    height: boost[3] ?? 0,
+                    weight: 1
+                };
             }
         });
     }
@@ -126,7 +151,16 @@ const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
         height: imageData.height
     };
 
-    smartcrop.crop(options.baseDir + imageData.path, imageSize)
+    var cropOptions = {
+        ...imageSize,
+        minScale: imageData.minScale
+    }
+
+    if (imageData.boost) {
+        cropOptions.boost = [imageData.boost];
+    }
+
+    smartcrop.crop(options.baseDir + imageData.path, cropOptions)
         .then(result => {
             sharp(options.baseDir + imageData.path)
                 .extract({
@@ -149,7 +183,8 @@ const parsePosition = (imageData, options) => new Promise((resolve, reject) => {
         .resize({
             width: imageData.width,
             height: imageData.height,
-            position: getPosition(imageData.position)
+            position: getPosition(imageData.position),
+            fit: imageData.fit
         })
         .toFormat(imageData.format)
         .toBuffer()
