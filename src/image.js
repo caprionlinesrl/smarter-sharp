@@ -45,6 +45,7 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         position: 'smart',
         fit: 'cover',
         minScale: 1,
+        sharpen: 0,
         boost: [],
         facesBoost: []
     };
@@ -96,7 +97,10 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
                 result.fit = value;
             }
             else if (name === 'minScale') {
-                result.minScale = value;
+                result.minScale = parseFloat(value);
+            }
+            else if (name === 'sharpen') {
+                result.sharpen = parseFloat(value);
             }
             else if (name === 'boost') {
                 const boost = value.split(',');
@@ -168,7 +172,7 @@ const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
 
     smartcrop.crop(options.baseDir + imageData.path, cropOptions)
         .then(result => {
-            sharp(options.baseDir + imageData.path)
+            var s = sharp(options.baseDir + imageData.path)
                 .extract({
                     width: result.topCrop.width,
                     height: result.topCrop.height,
@@ -176,8 +180,13 @@ const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
                     top: result.topCrop.y
                 })
                 .resize(imageSize)
-                .toFormat(imageData.format)
-                .toBuffer()
+                .toFormat(imageData.format);
+
+            if (imageData.sharpen > 0) {
+                s.sharpen({ sigma: imageData.sharpen });
+            }
+
+            s.toBuffer()
                 .then(data => resolve({ data, imageData }))
                 .catch(reject);
         })
@@ -185,15 +194,20 @@ const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
 });
 
 const parsePosition = (imageData, options) => new Promise((resolve, reject) => {
-    sharp(options.baseDir + imageData.path)
+    var s = sharp(options.baseDir + imageData.path)
         .resize({
             width: imageData.width,
             height: imageData.height,
             position: getPosition(imageData.position),
             fit: imageData.fit
         })
-        .toFormat(imageData.format)
-        .toBuffer()
+        .toFormat(imageData.format);
+
+    if (imageData.sharpen > 0) {
+        s.sharpen({ sigma: imageData.sharpen });
+    }
+
+    s.toBuffer()
         .then(data => resolve({ data, imageData }))
         .catch(reject);
 });
