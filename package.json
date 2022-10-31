@@ -4,6 +4,8 @@
   "license": "GPL",
   "type": "module",
   "dependencies": {
+    "canvas": "^2.10.2",
+    "face-api.js": "^0.22.2",
     "node-filesystem-cache": "^1.0.2",
     "sharp": "^0.30.6",
     "smartcrop": "^2.0.5",

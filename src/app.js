@@ -1,7 +1,7 @@
 import http from 'http';
 import process from 'process';
 import { parseOptions } from './options.js';
-import { processImageWithCache } from './image.js';
+import { processImage } from './image.js';
 
 const options = parseOptions(process.argv, {
     hostname: '0.0.0.0',
@@ -11,13 +11,15 @@ const options = parseOptions(process.argv, {
 });
 
 const server = http.createServer((req, res) => {
-    processImageWithCache(req.url, options)
+    processImage(req.url, options)
         .then(result => {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'image/' + result.imageData.format);
             res.end(Buffer.from(result.data));
         })
         .catch(err => {
+            console.error(err);
+
             res.statusCode = 404;
             res.setHeader('Content-Type', 'text/plain');
             res.end('Not found');

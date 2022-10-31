@@ -2,6 +2,7 @@ import FilesystemCache from "node-filesystem-cache";
 import url from 'url';
 import sharp from 'sharp';
 import smartcrop from 'smartcrop-sharp';
+import { parseFaces } from './faceapi.js';
 
 export const processImageWithCache = (imageUrl, options) => new Promise((resolve, reject) => {
     const cache = new FilesystemCache(options.cacheDir);
@@ -23,6 +24,7 @@ export const processImageWithCache = (imageUrl, options) => new Promise((resolve
 
 export const processImage = (imageUrl, options) => new Promise((resolve, reject) => {
     parseUrl(imageUrl, options)
+        //.then(imageData => parseFaces(imageData, options))
         .then(imageData => {
             return imageData.position === 'smart'
                 ? parseSmart(imageData, options)
@@ -43,7 +45,8 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         position: 'smart',
         fit: 'cover',
         minScale: 1,
-        boost: null
+        boost: [],
+        facesBoost: []
     };
 
     var formats = [
@@ -98,13 +101,13 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
             else if (name === 'boost') {
                 const boost = value.split(',');
 
-                result.boost = {
+                result.boost = [{
                     x: boost[0] ?? 0,
                     y: boost[1] ?? 0,
                     width: boost[2] ?? 0,
                     height: boost[3] ?? 0,
                     weight: 1
-                };
+                }];
             }
         });
     }
@@ -156,8 +159,11 @@ const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
         minScale: imageData.minScale
     }
 
-    if (imageData.boost) {
-        cropOptions.boost = [imageData.boost];
+    if (imageData.boost.length > 0) {
+        cropOptions.boost = imageData.boost;
+    }
+    else if (imageData.facesBoost.length > 0) {
+        cropOptions.boost = imageData.facesBoost;
     }
 
     smartcrop.crop(options.baseDir + imageData.path, cropOptions)
