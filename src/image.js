@@ -2,7 +2,7 @@ import FilesystemCache from "node-filesystem-cache";
 import url from 'url';
 import sharp from 'sharp';
 import smartcrop from 'smartcrop-sharp';
-import { parseFaces } from './faceapi.js';
+//import { parseFaces } from './faceapi.js';
 
 export const processImageWithCache = (imageUrl, options) => new Promise((resolve, reject) => {
     const cache = new FilesystemCache(options.cacheDir);

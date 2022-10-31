@@ -1,7 +1,7 @@
 import http from 'http';
 import process from 'process';
 import { parseOptions } from './options.js';
-import { processImage } from './image.js';
+import { processImageWithCache } from './image.js';
 
 const options = parseOptions(process.argv, {
     hostname: '0.0.0.0',
@@ -11,7 +11,7 @@ const options = parseOptions(process.argv, {
 });
 
 const server = http.createServer((req, res) => {
-    processImage(req.url, options)
+    processImageWithCache(req.url, options)
         .then(result => {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'image/' + result.imageData.format);
@@ -27,7 +27,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(options.port, options.hostname, () => {
-    console.log(
+    console.warn(
         'Server running at http://' + options.hostname + ':' + options.port + '/ ' +
         'on baseDir ' + options.baseDir + ' ' +
         'on cacheDir ' + options.cacheDir
