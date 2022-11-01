@@ -42,6 +42,7 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         shortSide: 0,
         longSide: 0,
         format: 'jpeg',
+        quality: 80,
         position: 'smart',
         fit: 'cover',
         minScale: 1,
@@ -89,6 +90,9 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
             }
             else if (name === 'format' && formats.includes(value)) {
                 result.format = value;
+            }
+            else if (name === 'quality') {
+                result.quality = parseInt(value);
             }
             else if (name === 'position' && positions.includes(value)) {
                 result.position = value;
@@ -180,7 +184,7 @@ const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
                     top: result.topCrop.y
                 })
                 .resize(imageSize)
-                .toFormat(imageData.format);
+                .toFormat(imageData.format, { quality: imageData.quality });
 
             if (imageData.sharpen > 0) {
                 s.sharpen({ sigma: imageData.sharpen });
@@ -201,7 +205,7 @@ const parsePosition = (imageData, options) => new Promise((resolve, reject) => {
             position: getPosition(imageData.position),
             fit: imageData.fit
         })
-        .toFormat(imageData.format);
+        .toFormat(imageData.format, { quality: imageData.quality });
 
     if (imageData.sharpen > 0) {
         s.sharpen({ sigma: imageData.sharpen });
