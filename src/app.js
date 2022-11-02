@@ -14,8 +14,8 @@ const server = http.createServer((req, res) => {
     processImageWithCache(req.url, options)
         .then(result => {
             res.statusCode = 200;
-            res.setHeader('Content-Type', 'image/' + result.imageData.format);
-            res.end(Buffer.from(result.data));
+            res.setHeader('Content-Type', 'image/' + result.imageOptions.format);
+            res.end(Buffer.from(result.imageData));
         })
         .catch(err => {
             console.error(err);

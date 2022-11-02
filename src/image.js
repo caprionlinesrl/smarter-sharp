@@ -24,11 +24,10 @@ export const processImageWithCache = (imageUrl, options) => new Promise((resolve
 
 export const processImage = (imageUrl, options) => new Promise((resolve, reject) => {
     parseUrl(imageUrl, options)
-        //.then(imageData => parseFaces(imageData, options))
-        .then(imageData => {
-            return imageData.position === 'smart'
-                ? parseSmart(imageData, options)
-                : parsePosition(imageData, options);
+        .then(imageOptions => {
+            return imageOptions.crop == 'smart'
+                ? parseCropSmart(imageOptions, options)
+                : parseCropOther(imageOptions, options)
         })
         .then(resolve)
         .catch(reject);
@@ -42,13 +41,9 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         shortSide: 0,
         longSide: 0,
         format: 'jpeg',
-        quality: 80,
-        position: 'smart',
-        fit: 'cover',
-        minScale: 1,
-        sharpen: 0,
-        boost: [],
-        facesBoost: []
+        crop: 'smart',
+        cropSmartBoost: '',
+        quality: 'optimized'
     };
 
     var formats = [
@@ -57,7 +52,7 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         'webp'
     ];
 
-    var positions = [
+    var crops = [
         'smart',
         'entropy',
         'attention',
@@ -69,12 +64,14 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         'bottom',
         'leftBottom',
         'left',
-        'leftTop'
+        'leftTop',
+        'none'
     ];
 
-    var fits = [
-        'cover',
-        'contain'
+    var qualities = [
+        'optimized',
+        'balanced',
+        'high'
     ];
 
     var parsedUrl = url.parse(imageUrl);
@@ -91,31 +88,22 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
             else if (name === 'format' && formats.includes(value)) {
                 result.format = value;
             }
-            else if (name === 'quality') {
-                result.quality = parseInt(value);
+            else if (name === 'crop' && crops.includes(value)) {
+                result.crop = value;
             }
-            else if (name === 'position' && positions.includes(value)) {
-                result.position = value;
-            }
-            else if (name === 'fit' && fits.includes(value)) {
-                result.fit = value;
-            }
-            else if (name === 'minScale') {
-                result.minScale = parseFloat(value);
-            }
-            else if (name === 'sharpen') {
-                result.sharpen = parseFloat(value);
-            }
-            else if (name === 'boost') {
+            else if (name === 'cropSmartBoost') {
                 const boost = value.split(',');
 
-                result.boost = [{
+                result.cropSmartBoost = [{
                     x: boost[0] ?? 0,
                     y: boost[1] ?? 0,
                     width: boost[2] ?? 0,
                     height: boost[3] ?? 0,
                     weight: 1
                 }];
+            }
+            else if (name === 'quality' && qualities.includes(value)) {
+                result.quality = value;
             }
         });
     }
@@ -156,63 +144,54 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         .catch(reject);
 });
 
-const parseSmart = (imageData, options) => new Promise((resolve, reject) => {
-    var imageSize = {
-        width: imageData.width,
-        height: imageData.height
+const parseCropSmart = (imageOptions, options) => new Promise((resolve, reject) => {
+    var size = {
+        width: imageOptions.width,
+        height: imageOptions.height
     };
 
-    var cropOptions = {
-        ...imageSize,
-        minScale: imageData.minScale
-    }
-
-    if (imageData.boost.length > 0) {
-        cropOptions.boost = imageData.boost;
-    }
-    else if (imageData.facesBoost.length > 0) {
-        cropOptions.boost = imageData.facesBoost;
-    }
-
-    smartcrop.crop(options.baseDir + imageData.path, cropOptions)
+    smartcrop.crop(options.baseDir + imageOptions.path, size)
         .then(result => {
-            var s = sharp(options.baseDir + imageData.path)
+            var image = sharp(options.baseDir + imageOptions.path)
                 .extract({
                     width: result.topCrop.width,
                     height: result.topCrop.height,
                     left: result.topCrop.x,
                     top: result.topCrop.y
                 })
-                .resize(imageSize)
-                .toFormat(imageData.format, { quality: imageData.quality });
+                .resize(size);
 
-            if (imageData.sharpen > 0) {
-                s.sharpen({ sigma: imageData.sharpen });
-            }
-
-            s.toBuffer()
-                .then(data => resolve({ data, imageData }))
+            optimise(image, imageOptions);
+        
+            image.toBuffer()
+                .then(imageData => resolve({ imageData, imageOptions }))
                 .catch(reject);
         })
         .catch(reject);
 });
 
-const parsePosition = (imageData, options) => new Promise((resolve, reject) => {
-    var s = sharp(options.baseDir + imageData.path)
-        .resize({
-            width: imageData.width,
-            height: imageData.height,
-            position: getPosition(imageData.position),
-            fit: imageData.fit
-        })
-        .toFormat(imageData.format, { quality: imageData.quality });
+const parseCropOther = (imageOptions, options) => new Promise((resolve, reject) => {
+    var image = sharp(options.baseDir + imageOptions.path);
 
-    if (imageData.sharpen > 0) {
-        s.sharpen({ sigma: imageData.sharpen });
+    if (imageOptions.crop == 'none') {
+        image.resize({
+            width: imageOptions.width,
+            height: imageOptions.height,
+            fit: 'contain'
+        });
+    }
+    else {
+        image.resize({
+            width: imageOptions.width,
+            height: imageOptions.height,
+            position: getPosition(imageOptions.crop)
+        });
     }
 
-    s.toBuffer()
-        .then(data => resolve({ data, imageData }))
+    optimise(image, imageOptions);
+
+    image.toBuffer()
+        .then(imageData => resolve({ imageData, imageOptions }))
         .catch(reject);
 });
 
@@ -227,4 +206,56 @@ const getPosition = pos => {
         // rightTop -> right top
         return pos.split(/(?=[A-Z])/).join(' ').toLowerCase();
     }
+};
+
+// quality = optimised, balanced, high
+
+const optimise = (image, imageOptions) => {
+    optimiseSharpen(image, imageOptions);
+
+    if (imageOptions.format == 'jpeg') {
+        console.log('jpeg');
+        optimiseJpeg(image, imageOptions);
+    }
+    else if (imageOptions.format == 'webp') {
+        optimiseWebp(image, imageOptions);
+    }
+    else if (imageOptions.format == 'png') {
+        optimisePng(image, imageOptions);
+    }
+};
+
+const optimiseSharpen = (image, imageOptions) => {
+    //image.sharpen({ sigma: imageOptions.sharpen });
+};
+
+const optimiseJpeg = (image, imageOptions) => {
+    console.log(imageOptions);
+    if (imageOptions.quality == 'optimized') {
+        console.log('optimized');
+        image.jpeg({
+            quality: 70,
+            mozjpeg: true
+        });
+    }
+    else if (imageOptions.quality == 'balanced') {
+        console.log('balanced');
+        image.jpeg({
+            quality: 80
+        });
+    }
+    else if (imageOptions.quality == 'high') {
+        console.log('high');
+        image.jpeg({
+            quality: 88
+        });
+    }
+};
+
+const optimiseWebp = (image, imageOptions) => {
+    image.webp();
+};
+
+const optimisePng = (image, imageOptions) => {
+    image.png();
 };
