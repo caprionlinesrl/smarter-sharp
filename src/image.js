@@ -242,7 +242,7 @@ const optimize = (image, imageOptions) => {
 };
 
 const optimizeSharpen = (image, imageOptions) => {
-    //image.sharpen({ sigma: imageOptions.sharpen });
+    image.sharpen({ sigma: 0.5 });
 };
 
 const optimizeJpeg = (image, imageOptions) => {
