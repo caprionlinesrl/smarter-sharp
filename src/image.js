@@ -94,7 +94,11 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
                     var [name, value] = arg.split('=');
 
                     if (['width', 'height', 'shortSide', 'longSide'].includes(name)) {
-                        result[name] = parseInt(value);
+                        value = parseInt(value);
+
+                        if (value > 0 && value < 5000) {
+                            result[name] = value;
+                        }
                     }
                     else if (name === 'format' && formats.includes(value)) {
                         result.format = value;
@@ -117,7 +121,11 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
                         result.quality = value;
                     }
                     else if (name === 'density') {
-                        result.density = parseFloat(value);
+                        value = parseFloat(value);
+
+                        if (value >= 1 && value <= 3) {
+                            result.density = value;
+                        }
                     }
                 });
             }
