@@ -208,8 +208,6 @@ const getPosition = pos => {
     }
 };
 
-// quality = optimised, balanced, high
-
 const optimise = (image, imageOptions) => {
     optimiseSharpen(image, imageOptions);
 
@@ -230,22 +228,18 @@ const optimiseSharpen = (image, imageOptions) => {
 };
 
 const optimiseJpeg = (image, imageOptions) => {
-    console.log(imageOptions);
     if (imageOptions.quality == 'optimized') {
-        console.log('optimized');
         image.jpeg({
             quality: 70,
             mozjpeg: true
         });
     }
     else if (imageOptions.quality == 'balanced') {
-        console.log('balanced');
         image.jpeg({
             quality: 80
         });
     }
     else if (imageOptions.quality == 'high') {
-        console.log('high');
         image.jpeg({
             quality: 88
         });
