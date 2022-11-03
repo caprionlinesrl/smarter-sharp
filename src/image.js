@@ -46,7 +46,7 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         height: 0,
         shortSide: 0,
         longSide: 0,
-        format: 'jpeg',
+        format: '',
         crop: 'smart',
         cropSmartBoost: '',
         quality: 'optimized'
@@ -81,42 +81,43 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
     ];
 
     var parsedUrl = url.parse(imageUrl);
-
     result.path = decodeURI(parsedUrl.pathname);
-
-    if (parsedUrl.query) {
-        parsedUrl.query.split('&').forEach(arg => {
-            var [name, value] = arg.split('=');
-
-            if (['width', 'height', 'shortSide', 'longSide'].includes(name)) {
-                result[name] = parseInt(value);
-            }
-            else if (name === 'format' && formats.includes(value)) {
-                result.format = value;
-            }
-            else if (name === 'crop' && crops.includes(value)) {
-                result.crop = value;
-            }
-            else if (name === 'cropSmartBoost') {
-                const boost = value.split(',');
-
-                result.cropSmartBoost = [{
-                    x: boost[0] ?? 0,
-                    y: boost[1] ?? 0,
-                    width: boost[2] ?? 0,
-                    height: boost[3] ?? 0,
-                    weight: 1
-                }];
-            }
-            else if (name === 'quality' && qualities.includes(value)) {
-                result.quality = value;
-            }
-        });
-    }
 
     sharp(options.baseDir + result.path)
         .metadata()
         .then(metadata => {
+            result.format = metadata.format;
+
+            if (parsedUrl.query) {
+                parsedUrl.query.split('&').forEach(arg => {
+                    var [name, value] = arg.split('=');
+
+                    if (['width', 'height', 'shortSide', 'longSide'].includes(name)) {
+                        result[name] = parseInt(value);
+                    }
+                    else if (name === 'format' && formats.includes(value)) {
+                        result.format = value;
+                    }
+                    else if (name === 'crop' && crops.includes(value)) {
+                        result.crop = value;
+                    }
+                    else if (name === 'cropSmartBoost') {
+                        const boost = value.split(',');
+
+                        result.cropSmartBoost = [{
+                            x: boost[0] ?? 0,
+                            y: boost[1] ?? 0,
+                            width: boost[2] ?? 0,
+                            height: boost[3] ?? 0,
+                            weight: 1
+                        }];
+                    }
+                    else if (name === 'quality' && qualities.includes(value)) {
+                        result.quality = value;
+                    }
+                });
+            }
+
             if (result.shortSide > 0) {
                 if (metadata.width < metadata.height) {
                     result.width = result.shortSide;
@@ -229,14 +230,14 @@ const finalize = (image, imageOptions, resolve, reject) => {
 const optimize = (image, imageOptions) => {
     optimizeSharpen(image, imageOptions);
 
-    if (imageOptions.format == 'jpeg') {
-        optimizeJpeg(image, imageOptions);
+    if (imageOptions.format == 'png') {
+        optimizePng(image, imageOptions);
     }
     else if (imageOptions.format == 'webp') {
         optimizeWebp(image, imageOptions);
     }
-    else if (imageOptions.format == 'png') {
-        optimizePng(image, imageOptions);
+    else {
+        optimizeJpeg(image, imageOptions);
     }
 };
 
