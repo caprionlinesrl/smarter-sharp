@@ -25,9 +25,15 @@ export const processImageWithCache = (imageUrl, options) => new Promise((resolve
 export const processImage = (imageUrl, options) => new Promise((resolve, reject) => {
     parseUrl(imageUrl, options)
         .then(imageOptions => {
-            return imageOptions.crop == 'smart'
-                ? parseCropSmart(imageOptions, options)
-                : parseCropOther(imageOptions, options)
+            if (imageOptions.crop == 'smart') {
+                return parseCropSmart(imageOptions, options);
+            }
+            else if (imageOptions.crop == 'none') {
+                return parseCropNone(imageOptions, options);
+            }
+            else {
+                return parseCropOther(imageOptions, options);
+            }
         })
         .then(resolve)
         .catch(reject);
@@ -161,38 +167,42 @@ const parseCropSmart = (imageOptions, options) => new Promise((resolve, reject) 
                 })
                 .resize(size);
 
-            optimise(image, imageOptions);
-        
-            image.toBuffer()
-                .then(imageData => resolve({ imageData, imageOptions }))
-                .catch(reject);
+            finalize(image, imageOptions, resolve, reject);
         })
         .catch(reject);
+});
+
+const parseCropNone = (imageOptions, options) => new Promise((resolve, reject) => {
+    var image = sharp(options.baseDir + imageOptions.path);
+
+    image.stats()
+        .then(({ channels: [rc, gc, bc] }) => {
+            image.resize({
+                width: imageOptions.width,
+                height: imageOptions.height,
+                fit: 'contain',
+                background: {
+                    r: Math.round(rc.mean),
+                    g: Math.round(gc.mean),
+                    b: Math.round(bc.mean),
+                    alpha: 1
+                }
+            });
+
+            finalize(image, imageOptions, resolve, reject);
+    });
 });
 
 const parseCropOther = (imageOptions, options) => new Promise((resolve, reject) => {
     var image = sharp(options.baseDir + imageOptions.path);
 
-    if (imageOptions.crop == 'none') {
-        image.resize({
-            width: imageOptions.width,
-            height: imageOptions.height,
-            fit: 'contain'
-        });
-    }
-    else {
-        image.resize({
-            width: imageOptions.width,
-            height: imageOptions.height,
-            position: getPosition(imageOptions.crop)
-        });
-    }
+    image.resize({
+        width: imageOptions.width,
+        height: imageOptions.height,
+        position: getPosition(imageOptions.crop)
+    });
 
-    optimise(image, imageOptions);
-
-    image.toBuffer()
-        .then(imageData => resolve({ imageData, imageOptions }))
-        .catch(reject);
+    finalize(image, imageOptions, resolve, reject);
 });
 
 const getPosition = pos => {
@@ -208,26 +218,33 @@ const getPosition = pos => {
     }
 };
 
-const optimise = (image, imageOptions) => {
-    optimiseSharpen(image, imageOptions);
+const finalize = (image, imageOptions, resolve, reject) => {
+    optimize(image, imageOptions);
+
+    image.toBuffer()
+        .then(imageData => resolve({ imageData, imageOptions }))
+        .catch(reject);
+};
+
+const optimize = (image, imageOptions) => {
+    optimizeSharpen(image, imageOptions);
 
     if (imageOptions.format == 'jpeg') {
-        console.log('jpeg');
-        optimiseJpeg(image, imageOptions);
+        optimizeJpeg(image, imageOptions);
     }
     else if (imageOptions.format == 'webp') {
-        optimiseWebp(image, imageOptions);
+        optimizeWebp(image, imageOptions);
     }
     else if (imageOptions.format == 'png') {
-        optimisePng(image, imageOptions);
+        optimizePng(image, imageOptions);
     }
 };
 
-const optimiseSharpen = (image, imageOptions) => {
+const optimizeSharpen = (image, imageOptions) => {
     //image.sharpen({ sigma: imageOptions.sharpen });
 };
 
-const optimiseJpeg = (image, imageOptions) => {
+const optimizeJpeg = (image, imageOptions) => {
     if (imageOptions.quality == 'optimized') {
         image.jpeg({
             quality: 70,
@@ -246,10 +263,10 @@ const optimiseJpeg = (image, imageOptions) => {
     }
 };
 
-const optimiseWebp = (image, imageOptions) => {
+const optimizeWebp = (image, imageOptions) => {
     image.webp();
 };
 
-const optimisePng = (image, imageOptions) => {
+const optimizePng = (image, imageOptions) => {
     image.png();
 };
