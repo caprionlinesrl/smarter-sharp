@@ -49,7 +49,8 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         format: '',
         crop: 'smart',
         cropSmartBoost: '',
-        quality: 'optimized'
+        quality: 'optimized',
+        density: 1
     };
 
     var formats = [
@@ -115,6 +116,9 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
                     else if (name === 'quality' && qualities.includes(value)) {
                         result.quality = value;
                     }
+                    else if (name === 'density') {
+                        result.density = parseFloat(value);
+                    }
                 });
             }
 
@@ -144,6 +148,22 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
             }
             else if (result.width == 0 && result.height > 0) {
                 result.width = parseInt(result.height * metadata.width / metadata.height);
+            }
+
+            if (result.width > 0) {
+                result.width *= result.density;
+            }
+
+            if (result.height > 0) {
+                result.height *= result.density;
+            }
+
+            if (result.shortSide > 0) {
+                result.shortSide *= result.density;
+            }
+
+            if (result.longSide > 0) {
+                result.longSide *= result.density;
             }
 
             resolve(result);
