@@ -1,5 +1,6 @@
 import FilesystemCache from "node-filesystem-cache";
 import url from 'url';
+import fs from 'fs';
 import sharp from 'sharp';
 import smartcrop from 'smartcrop-sharp';
 //import { parseFaces } from './faceapi.js';
@@ -25,7 +26,10 @@ export const processImageWithCache = (imageUrl, options) => new Promise((resolve
 export const processImage = (imageUrl, options) => new Promise((resolve, reject) => {
     parseUrl(imageUrl, options)
         .then(imageOptions => {
-            if (imageOptions.crop == 'smart') {
+            if (imageOptions.original) {
+                return parseOriginal(imageOptions, options);
+            }
+            else if (imageOptions.crop == 'smart') {
                 return parseCropSmart(imageOptions, options);
             }
             else if (imageOptions.crop == 'none') {
@@ -50,7 +54,8 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         crop: 'smart',
         cropSmartBoost: '',
         quality: 'optimized',
-        density: 1
+        density: 1,
+        original: false
     };
 
     var formats = [
@@ -129,6 +134,9 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
                     }
                 });
             }
+            else {
+                result.original = true;
+            }
 
             if (result.shortSide > 0) {
                 if (metadata.width < metadata.height) {
@@ -177,6 +185,17 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
             resolve(result);
         })
         .catch(reject);
+});
+
+const parseOriginal = (imageOptions, options) => new Promise((resolve, reject) => {
+    fs.readFile(options.baseDir + imageOptions.path, (err, imageData) => {
+        if (err) {
+            reject(err);
+        }
+        else {
+            resolve({ imageData, imageOptions });
+        }
+    });
 });
 
 const parseCropSmart = (imageOptions, options) => new Promise((resolve, reject) => {
