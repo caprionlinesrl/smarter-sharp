@@ -1,6 +1,8 @@
 import FilesystemCache from "node-filesystem-cache";
 import url from 'url';
 import fs from 'fs';
+import http from 'http';
+import https from 'https';
 import sharp from 'sharp';
 import smartcrop from 'smartcrop-sharp';
 //import { parseFaces } from './faceapi.js';
@@ -24,8 +26,8 @@ export const processImageWithCache = (imageUrl, options) => new Promise((resolve
 });
 
 export const processImage = (imageUrl, options) => new Promise((resolve, reject) => {
-    parseUrl(imageUrl, options)
-        .then(imageOptions => {
+    parseUrl(imageUrl, options).then(parsedUrl => {
+        return parseImageOptions(parsedUrl, options).then(imageOptions => {
             if (imageOptions.original) {
                 return parseOriginal(imageOptions, options);
             }
@@ -38,12 +40,47 @@ export const processImage = (imageUrl, options) => new Promise((resolve, reject)
             else {
                 return parseCropOther(imageOptions, options);
             }
-        })
-        .then(resolve)
-        .catch(reject);
+        });
+    })
+    .then(resolve)
+    .catch(reject);
 });
 
 const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
+    var parsedUrl = url.parse(imageUrl);
+    parsedUrl.pathname = decodeURI(parsedUrl.pathname);
+
+    const isHttp = parsedUrl.pathname.startsWith('/http:');
+    const isHttps = parsedUrl.pathname.startsWith('/https:');
+    const isRemote = isHttp || isHttps;
+
+    if (isRemote) {
+        var remoteImageUrl = parsedUrl.pathname.substr(1);
+        var remoteImagePath = '/remote/' + encodeURIComponent(remoteImageUrl);
+
+        parsedUrl.pathname = remoteImagePath;
+
+        if (!fs.existsSync(options.baseDir + '/remote')) {
+            fs.mkdirSync(options.baseDir + '/remote');
+        }
+
+        const file = fs.createWriteStream(options.baseDir + '/' + remoteImagePath);
+        const remoteRequest = isHttp ? http : https;
+
+        remoteRequest.get(remoteImageUrl, response => {
+            response.on('end', () => {
+                resolve(parsedUrl);
+            });
+
+            response.pipe(file);
+        });
+    }
+    else {
+        resolve(parsedUrl);
+    }
+});
+
+const parseImageOptions = (parsedUrl, options) => new Promise((resolve, reject) => {
     var result = {
         path: '',
         width: 0,
@@ -86,8 +123,7 @@ const parseUrl = (imageUrl, options) => new Promise((resolve, reject) => {
         'high'
     ];
 
-    var parsedUrl = url.parse(imageUrl);
-    result.path = decodeURI(parsedUrl.pathname);
+    result.path = parsedUrl.pathname;
 
     sharp(options.baseDir + result.path)
         .metadata()
