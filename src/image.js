@@ -91,7 +91,7 @@ const parseImageOptions = (parsedUrl, options) => new Promise((resolve, reject) 
         crop: 'smart',
         cropSmartBoost: '',
         quality: 'optimized',
-        density: 1,
+        density: 1.0,
         original: false
     };
 
@@ -164,7 +164,7 @@ const parseImageOptions = (parsedUrl, options) => new Promise((resolve, reject) 
                     else if (name === 'density') {
                         value = parseFloat(value);
 
-                        if (value >= 1 && value <= 3) {
+                        if (value >= 1.0 && value <= 3.0) {
                             result.density = value;
                         }
                     }
@@ -203,19 +203,19 @@ const parseImageOptions = (parsedUrl, options) => new Promise((resolve, reject) 
             }
 
             if (result.width > 0) {
-                result.width *= result.density;
+                result.width = parseInt(result.width * result.density);
             }
 
             if (result.height > 0) {
-                result.height *= result.density;
+                result.height = parseInt(result.height * result.density);
             }
 
             if (result.shortSide > 0) {
-                result.shortSide *= result.density;
+                result.shortSide = parseInt(result.shortSide * result.density);
             }
 
             if (result.longSide > 0) {
-                result.longSide *= result.density;
+                result.longSide = parseInt(result.longSide * result.density);
             }
 
             resolve(result);
